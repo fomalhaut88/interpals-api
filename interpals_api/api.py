@@ -27,6 +27,7 @@ class ApiAuthError(ApiError):
 class Api:
     timeout = 3.0
     host = "www.interpals.net"
+    user_agent = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.77 Safari/537.36"
 
     def __init__(self, session):
         self._session = session
@@ -216,7 +217,7 @@ class Api:
         return "https://{}{}".format(cls.host, url)
 
     def _get(self, url, params=None, check_auth=False):
-        headers = self._cookie_headers()
+        headers = self._get_headers()
         if params is not None:
             url = url + '?' + urlencode(params, True)
         full_url = self._get_full_url(url)
@@ -226,7 +227,7 @@ class Api:
         return response
 
     def _post(self, url, params, check_auth=False):
-        headers = self._cookie_headers()
+        headers = self._get_headers()
         headers['Content-Type'] = 'application/x-www-form-urlencoded'
         full_url = self._get_full_url(url)
         response = requests.post(full_url, data=params, headers=headers, timeout=self.timeout, allow_redirects=False)
@@ -234,11 +235,12 @@ class Api:
             raise ApiAuthError()
         return response
 
-    def _cookie_headers(self):
+    def _get_headers(self):
         cookie = Cookie()
         cookie.update(self._session.cookie())
         headers = {
-            'Cookie': cookie.as_string()
+            'Cookie': cookie.as_string(),
+            'User-Agent': self.user_agent
         }
         return headers
 

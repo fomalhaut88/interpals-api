@@ -1,7 +1,7 @@
 import re
 
 
-re_csfr_token = re.compile(r'<meta name="csrf-token" content="(.*?)">')
+re_csfr_token = re.compile(r'<meta name="csrf-token" content="(.*?)"')
 
 
 def find_csrf_token(html):

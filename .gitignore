@@ -7,3 +7,5 @@ build
 dist
 
 test-config.txt
+
+.venv

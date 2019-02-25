@@ -13,6 +13,7 @@ setup(
     install_requires=[
         'pyyaml',
         'requests',
+        'lxml',
         'beautifulsoup4',
     ],
 )
