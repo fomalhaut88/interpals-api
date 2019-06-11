@@ -67,7 +67,9 @@ class ChatParser:
         else:
             data['user'], data['age'] = user_age[0], None
         data['city'] = tui_el[1].text
-        data['sex'] = tui_el[0]['class'][1]
+
+        tui_el_0_class = tui_el[0]['class']
+        data['sex'] = tui_el_0_class[1] if len(tui_el_0_class) > 1 else None
 
         data['avatar'] = 'https:' + element.find(class_='thumb')['src']
 
