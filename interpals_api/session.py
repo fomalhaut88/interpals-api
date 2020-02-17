@@ -70,9 +70,11 @@ class Session:
             headers=headers,
             allow_redirects=False
         )
+        set_cookies = cls.extract_set_cookies(response.headers)
+        cookie.update(set_cookies)
 
         if response.status_code == 302 and response.reason == 'Found':
-            return cls(username, set_cookies['interpals_sessid'], set_cookies['csrf_cookieV2'])
+            return cls(username, cookie['interpals_sessid'], cookie['csrf_cookieV2'])
 
         if response.status_code == 200 and response.reason == 'OK':
             raise SessionError("Wrong username or password")

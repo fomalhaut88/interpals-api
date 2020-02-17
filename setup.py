@@ -5,7 +5,7 @@ from setuptools import find_packages
 
 setup(
     name='interpals-api',
-    version='1.0',
+    version='1.1',
     packages=find_packages(),
     license=open('LICENSE.txt').read(),
     long_description=open('README.md').read(),
