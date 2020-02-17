@@ -42,9 +42,9 @@ print(users)
 options = {
     'age1': '20',
     'age2': '40',
-    'sex[]': ['male', 'female'],
-    'continents[]': ['AF', 'AS', 'EU', 'NA', 'OC', 'SA'],
-    'countries[]': ['US', 'CA', 'UK', 'RU'],
+    'sex': ['male', 'female'],
+    'continents': ['AF', 'AS', 'EU', 'NA', 'OC', 'SA'],
+    'countries': ['US', 'CA', 'UK', 'RU'],
     'keywords': 'travelling',
     'online': True,
     'cityName': 'London'  # Or you can use 'city' with its direct code on the website (it's faster)
