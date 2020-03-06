@@ -73,6 +73,7 @@ api.friend_add(uid)
 # Removing 'someuser' from friends
 api.friend_remove(uid)
 
+# Listing pictures
 albums = api.albums(uid)
 for album in albums:
     aid = album['aid']
