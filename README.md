@@ -9,6 +9,10 @@ This Python library provides a simple HTTP API for working with the website http
 * listing, adding and removing friends
 * listing albums and pictures
 
+## Installation
+
+    pip install git+https://github.com/fomalhaut88/interpals-api.git
+
 ## Examples
 
 Basic example to retrieve user info:
