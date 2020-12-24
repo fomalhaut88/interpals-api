@@ -137,17 +137,29 @@ class Api:
 
     def chat_messages(self, thread_id, last_msg_id=None):
         params = {
-            'action': 'load_messages',
-            'thread': thread_id
+            'thread_id': thread_id,
+            'view': "paged",
+            'page': 1
         }
         if last_msg_id:
             params['last_msg_id'] = last_msg_id
 
-        response = self._post("/pm.php", params)
-        body = response.json()['body']
+        response = self._get("/pm.php", params)
+        body = response.text
 
         chat_parser = ChatParser()
-        messages = chat_parser.parse_messages(body)
+
+        number_pages = chat_parser.parse_number_pages(body)
+
+        if number_pages > 10:
+            print("Found %d pages, parsing will take a moment." % number_pages)
+        
+        messages = list()
+        for i in range(1, number_pages+1):
+            params["page"] = i
+            response = self._get("/pm.php", params)
+            body = response.text
+            messages += chat_parser.parse_messages(body)
 
         return messages
 

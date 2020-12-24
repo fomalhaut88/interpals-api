@@ -26,6 +26,15 @@ class ChatParser:
 
         return chats
 
+    def parse_number_pages(self, data: str) -> int:
+        soup = BeautifulSoup(data, "lxml")
+        link_to_last_page = soup.find('a', {'title' : 'Last page'})
+        if link_to_last_page:
+            number_pages = int(link_to_last_page["href"].split("page=")[-1])
+        else:
+            number_pages = 1
+        return number_pages
+
     def parse_messages(self, body):
         soup = BeautifulSoup(body, "lxml")
 
