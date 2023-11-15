@@ -1,2 +1,2 @@
-from .session import Session
-from .api import Api
+from .session import Session, SessionAsync
+from .api import Api, ApiAsync

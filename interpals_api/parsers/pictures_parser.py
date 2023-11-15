@@ -23,9 +23,9 @@ class PicturesParser:
         pictures = []
         for element in elements:
             picture = {}
-            picture['src180x180'] = 'https:' + element.find('img')['src']
-            picture['src'] = "https://cdn-en.ipstatic.net/photos/" + picture['src180x180'].split('/180x180/')[1]
-            picture['src'] = self._patch_src(picture['src'])
+            picture['src180x180'] = element.find('img')['src']
+            picture['src'] = "https://ipstatic.net/photos/" + picture['src180x180'].split('/180x180/')[1]
+            # picture['src'] = self._patch_src(picture['src'])
             pictures.append(picture)
 
         return pictures
@@ -51,12 +51,12 @@ class PicturesParser:
     def _parse_album_pictures(self, element):
         links = element.find_all('a', class_='thumb')
         pics = [
-            'https:' + link.find('img')['src']
+            link.find('img')['src']
             for link in links
         ]
         return {'pictures': pics}
 
-    def _patch_src(self, src):
-        if src[-6] == '_':
-            src = src[:-6] + src[-4:]
-        return src
+    # def _patch_src(self, src):
+    #     if src[-6] == '_':
+    #         src = src[:-6] + src[-4:]
+    #     return src

@@ -9,9 +9,35 @@ This Python library provides a simple HTTP API for working with the website http
 * listing, adding and removing friends
 * listing albums and pictures
 
+Basic example:
+
+```python
+from interpals_api import Session, Api
+
+session = Session.login('yourusername', 'yourpassword')
+api = Api(session)
+
+user_info = api.profile('someuser')
+print(user_info)
+```
+
+Since version `2.1` it supports asynchronous calls for each api method. Below there is a brief asynchonous example:
+
+```python
+from interpals_api import SessionAsync, ApiAsync
+
+session = await SessionAsync.login('yourusername', 'yourpassword')
+api = ApiAsync(session)
+
+user_info = await api.profile('someuser')
+print(user_info)
+```
+
 ## Installation
 
-    pip install git+https://github.com/fomalhaut88/interpals-api.git
+```
+pip install interpals-api
+```
 
 ## Examples
 
@@ -25,6 +51,22 @@ api = Api(session)
 
 # This gives info of the user with the link: https://www.interpals.net/someuser
 user_info = api.profile('someuser')
+```
+
+Dump and load session object:
+
+```python
+from interpals_api import Session, Api
+
+session = Session.login('yourusername', 'yourpassword')
+
+# Save session into a file
+with open('session.json', 'w') as f:
+    session.dump(f)
+
+# Load session from the saved file
+with open('session.json') as f:
+    session = Session.load(f)
 ```
 
 Viewing and searching for users:
@@ -83,7 +125,7 @@ for album in albums:
     aid = album['aid']
     pictures = api.pictures(uid, aid)
     for picture in pictures:
-        print(picture['src])
+        print(picture['src'])
 ```
 
 Working with the chat is done through `thread_id`:

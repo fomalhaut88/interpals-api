@@ -1,12 +1,13 @@
-import yaml
+import json
+from urllib.parse import urljoin
+
 import requests
+import aiohttp
 
-from .cookie import Cookie
 from .utils import find_csrf_token
-
-
-class SessionError(Exception):
-    pass
+from .errors import (NoCSRFTokenError, WrongUsernameOrPasswordError,
+                     SessionError, TooManyLoginAttemptsError)
+from .cookie import Cookie
 
 
 class Session:
@@ -15,45 +16,64 @@ class Session:
         self.interpals_sessid = interpals_sessid
         self.csrf_cookieV2 = csrf_cookieV2
 
+    def __repr__(self):
+        return f"Session(username={self.username}, " \
+               f"interpals_sessid={self.interpals_sessid}, " \
+               f"csrf_cookieV2={self.csrf_cookieV2})"
+
     def cookie(self):
         return {
             'interpals_sessid': self.interpals_sessid,
             'csrf_cookieV2': self.csrf_cookieV2
         }
 
-    def save(self, path):
-        with open(path, 'w') as f:
-            data = {
-                'username': self.username,
-                'interpals_sessid': self.interpals_sessid,
-                'csrf_cookieV2': self.csrf_cookieV2
-            }
-            yaml.dump(data, f)
+    def dump(self, f):
+        kwargs = {
+            'username': self.username,
+            'interpals_sessid': self.interpals_sessid,
+            'csrf_cookieV2': self.csrf_cookieV2,
+        }
+        json.dump(kwargs, f)
 
     @classmethod
-    def load(cls, path):
-        with open(path) as f:
-            data = yaml.load(f)
-        return cls(data['username'], data['interpals_sessid'], data['csrf_cookieV2'])
-
-    @classmethod
-    def extract_set_cookies(cls, response_headers):
-        set_cookies = {}
-        for key, value in response_headers.items():
-            if key.lower() == "set-cookie":
-                for val in value.split("HttpOnly,"):
-                    cookie_key, cookie_value = Cookie.parse_set_cookie(val)
-                    set_cookies[cookie_key] = cookie_value
-        return set_cookies
+    def load(cls, f):
+        kwargs = json.load(f)
+        return cls(**kwargs)
 
     @classmethod
     def login(cls, username, password):
-        response = requests.get("https://www.interpals.net/")
-        set_cookies = cls.extract_set_cookies(response.headers)
-        csrf_token = find_csrf_token(response.text)
-
+        # Cookie object
         cookie = Cookie()
-        cookie.update(set_cookies)
+
+        # Request initial page
+        csrf_token = cls._request_initial_page(cookie)
+
+        # Request login endpoint
+        cls._request_login_endpoint(username, password, cookie, csrf_token)
+
+        # Create and return session instance
+        return cls(username=username,
+                   interpals_sessid=cookie['interpals_sessid'],
+                   csrf_cookieV2=cookie['csrf_cookieV2'])
+
+    @classmethod
+    def _request_initial_page(cls, cookie):
+        with requests.get("https://www.interpals.net/") as resp:
+            # Get initial cookie
+            set_cookie = Cookie.from_response_headers(resp.headers)
+            cookie.update(set_cookie)
+
+            # Extract CSRF token from the HTML
+            csrf_token = find_csrf_token(resp.text)
+
+            # Raise error if no token found
+            if csrf_token is None:
+                raise NoCSRFTokenError()
+
+        return csrf_token
+
+    @classmethod
+    def _request_login_endpoint(cls, username, password, cookie, csrf_token):
         headers = {
             'Content-Type': 'application/x-www-form-urlencoded',
             'Cookie': cookie.as_string(),
@@ -64,19 +84,114 @@ class Session:
             'password': password,
             'csrf_token': csrf_token
         }
-        response = requests.post(
-            "https://www.interpals.net/app/auth/login",
-            data=data,
-            headers=headers,
-            allow_redirects=False
+
+        # Request login entry point
+        with requests.post("https://www.interpals.net/app/auth/login",
+                           data=data, headers=headers, 
+                           allow_redirects=False) as resp:
+            # Update cookie
+            set_cookie = Cookie.from_response_headers(resp.headers)
+            cookie.update(set_cookie)
+
+            # Check status
+            if resp.status_code == 200:
+                raise WrongUsernameOrPasswordError()
+            elif resp.status_code == 302:
+                location = resp.headers['Location']
+            else:
+                raise SessionError(
+                    f"Unknown response status while login: {resp.status_code}"
+                )
+
+        # Request the location to check success
+        url = urljoin("https://www.interpals.net", location)
+        headers = {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Cookie': cookie.as_string(),
+        }
+        with requests.get(url, headers=headers) as resp:
+            if "Too many unsuccessful login attempts." in resp.text:
+                raise TooManyLoginAttemptsError()
+
+
+class SessionAsync(Session):
+    @classmethod
+    async def login(cls, username, password):
+        # Cookie object
+        cookie = Cookie()
+
+        # Request initial page
+        csrf_token = await cls._request_initial_page(cookie)
+
+        # Request login endpoint
+        await cls._request_login_endpoint(
+            username, password, cookie, csrf_token
         )
-        set_cookies = cls.extract_set_cookies(response.headers)
-        cookie.update(set_cookies)
 
-        if response.status_code == 302 and response.reason == 'Found':
-            return cls(username, cookie['interpals_sessid'], cookie['csrf_cookieV2'])
+        # Create and return session instance
+        return cls(username=username,
+                   interpals_sessid=cookie['interpals_sessid'],
+                   csrf_cookieV2=cookie['csrf_cookieV2'])
 
-        if response.status_code == 200 and response.reason == 'OK':
-            raise SessionError("Wrong username or password")
+    @classmethod
+    async def _request_initial_page(cls, cookie):
+        async with aiohttp.ClientSession() as session:
+            async with session.get("https://www.interpals.net/") as resp:
+                # Get initial cookie
+                set_cookie = Cookie.from_response_headers(resp.headers)
+                cookie.update(set_cookie)
 
-        raise SessionError("An error has occurred during logging in")
+                # Extract CSRF token from the HTML
+                text = await resp.text()
+                csrf_token = find_csrf_token(text)
+
+                # Raise error if no token found
+                if csrf_token is None:
+                    raise NoCSRFTokenError()
+
+        return csrf_token
+
+    @classmethod
+    async def _request_login_endpoint(cls, username, password, cookie, 
+                                      csrf_token):
+        headers = {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Cookie': cookie.as_string(),
+            'Referer': 'https://www.interpals.net/',
+        }
+        data = {
+            'username': username,
+            'password': password,
+            'csrf_token': csrf_token
+        }
+
+        # Request login entry point
+        async with aiohttp.ClientSession() as session:
+            async with session.post("https://www.interpals.net/app/auth/login",
+                                    data=data, headers=headers, 
+                                    allow_redirects=False) as resp:
+                # Update cookie
+                set_cookie = Cookie.from_response_headers(resp.headers)
+                cookie.update(set_cookie)
+
+                # Check status
+                if resp.status == 200:
+                    raise WrongUsernameOrPasswordError()
+                elif resp.status == 302:
+                    location = resp.headers['Location']
+                else:
+                    raise SessionError(
+                        f"Unknown response status while login: {resp.status}"
+                    )
+
+        # Request the location to check success
+        url = urljoin("https://www.interpals.net", location)
+        headers = {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Cookie': cookie.as_string(),
+        }
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, headers=headers) as resp:
+                text = await resp.text()
+                if "Too many unsuccessful login attempts." in text:
+                    raise TooManyLoginAttemptsError()
