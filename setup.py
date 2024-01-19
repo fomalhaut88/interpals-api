@@ -8,7 +8,7 @@ def get_long_description():
 
 setup(
     name='interpals-api',
-    version="2.2.0",
+    version="2.2.1",
     author='Alexander Khlebushchev',
     packages=find_packages(),
     license="MIT",

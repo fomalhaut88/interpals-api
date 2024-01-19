@@ -9,7 +9,13 @@ This Python library provides a simple HTTP API for working with the website http
 * listing, adding and removing friends
 * listing albums and pictures
 
-Basic example:
+## Installation
+
+```
+pip install interpals-api
+```
+
+## Basic example
 
 ```python
 from interpals_api import Session, Api
@@ -33,13 +39,7 @@ user_info = await api.profile('someuser')
 print(user_info)
 ```
 
-## Installation
-
-```
-pip install interpals-api
-```
-
-## Examples
+## Other examples
 
 Basic example to retrieve user info:
 
