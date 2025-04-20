@@ -9,5 +9,6 @@ __pycache__
 /test-config.txt
 
 /.venv/
+venv/
 /.idea/
 /main.py
