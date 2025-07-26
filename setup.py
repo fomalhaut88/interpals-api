@@ -23,7 +23,7 @@ setup(
     zip_safe=False,
     long_description=get_long_description(),
     long_description_content_type="text/markdown",
-    python_requires='>=3.10',
+    python_requires='>=3.12',
     install_requires=[
         'aiohttp>=3.12',
         'requests>=2.32',
