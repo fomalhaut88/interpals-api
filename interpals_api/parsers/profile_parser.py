@@ -1,8 +1,27 @@
+"""
+Parser for general profile data of a user. It includes gender, location,
+online, join date, status message, avatar URL, uid number and the description.
+"""
+
+from typing import Dict, Any
+
 from bs4 import BeautifulSoup
 
 
 class ProfileParser:
-    def parse(self, content):
+    """
+    Parser class.
+
+    ```python
+    parser = ProfileParser()
+    data = parser.parse(html)
+    ```
+    """
+
+    def parse(self, content: str) -> Dict[str, Any]:
+        """
+        Parse HTML content and return the data as a dictionary.
+        """
         soup = BeautifulSoup(content, "lxml")
 
         data = {}

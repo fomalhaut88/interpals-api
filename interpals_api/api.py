@@ -1,7 +1,13 @@
+"""
+Classes that implement sync and async API calls and parsing. To create an
+instance session object is required.
+"""
+
 import json
 import asyncio
 from urllib.parse import urlencode, urlparse, parse_qs
 from time import sleep
+from typing import List, Dict, Any, Generator, Optional
 
 import requests
 import aiohttp
@@ -14,28 +20,56 @@ from .parsers.profile_parser import ProfileParser
 from .parsers.chat_parser import ChatParser
 from .parsers.friends_parser import FriendsParser
 from .parsers.pictures_parser import PicturesParser
+from .session import Session, SessionAsync
 
 
 class Api:
+    """
+    Class for synchronous API.
+    """
+
     timeout = 3.0
+    """
+    Timeout for HTTP calls. Override it if needed.
+    """
+
     host = "interpals.net"
+    """
+    Host address.
+    """
+
     user_agent = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 " \
                  "(KHTML, like Gecko) Chrome/70.0.3538.77 Safari/537.36"
+    """
+    `User-Agent` header in each HTTP call. Override it if needed.
+    """
 
-    def __init__(self, session):
+    def __init__(self, session: Session):
+        """
+        Create an API instance.
+        """
         self._session = session
 
-    def check_auth(self):
+    def check_auth(self) -> bool:
+        """
+        Check whether the session is authorized.
+        """
         if self._session:
             response = self._get(self._session.username)
             return self._check_body_for_auth(response.text)
         else:
             return False
 
-    def view(self, user):
+    def view(self, user: str):
+        """
+        View the given user.
+        """
         self._get(user, check_auth=True)
 
-    def profile(self, user):
+    def profile(self, user: str) -> Dict[str, Any]:
+        """
+        Get the profile information of the user.
+        """
         response = self._get(user, check_auth=True)
 
         if "User not found." in response.text:
@@ -46,7 +80,10 @@ class Api:
 
         return data
 
-    def visitors(self):
+    def visitors(self) -> List[str]:
+        """
+        Get users who viewed your profile.
+        """
         response = self._get("/app/views", check_auth=True)
         soup = BeautifulSoup(response.text, "lxml")
         items = soup.find_all('div', class_='vBottomTxt')
@@ -56,7 +93,13 @@ class Api:
             users.append(user)
         return users
 
-    def search(self, options, limit=1000, timeout=0.0):
+    def search(self, options: dict, limit: int = 1000, 
+               timeout: float = 0.0) -> Generator[str, None, None]:
+        """
+        Search for users according to the search `options`. The total number
+        of users is `limit`. Since users are requested as pages, `timeout`
+        is a timeout between page loading.
+        """
         response = self._get("/app/search", check_auth=True)
         csrf_token = find_csrf_token(response.text)
 
@@ -80,11 +123,17 @@ class Api:
 
             sleep(timeout)
 
-    def get_uid(self, user):
+    def get_uid(self, user: str) -> str:
+        """
+        Get unique user identifier `uid`.
+        """
         profile_info = self.profile(user)
         return profile_info['uid']
 
-    def get_thread_id(self, uid):
+    def get_thread_id(self, uid: str) -> str:
+        """
+        Get a chat thread_id with a user given as `uid`.
+        """
         params = {'action': 'send', 'uid': uid}
         response = self._get("/pm.php", params)
         assert response.status_code == 301
@@ -94,7 +143,10 @@ class Api:
 
         return thread_id
 
-    def chat(self, count=9, offset=0):
+    def chat(self, count: int = 9, offset: int = 0) -> Dict[str, Any]:
+        """
+        Get general chat information in count `count` with the offset `offset`.
+        """
         chat_parser = ChatParser()
 
         response = self._get("/pm.php", check_auth=True)
@@ -128,7 +180,13 @@ class Api:
             'unread': unread
         }
 
-    def chat_messages(self, thread_id, last_msg_id=None):
+    def chat_messages(self, thread_id: str, 
+                      last_msg_id: Optional[str] = None
+                      ) -> List[Dict[str, Any]]:
+        """
+        Get chat messages by `thread_id` and `last_msg_id` (so history can be 
+        loaded).
+        """
         params = {
             'action': 'load_messages',
             'thread': thread_id
@@ -144,7 +202,11 @@ class Api:
 
         return messages
 
-    def chat_send(self, thread_id, message):
+    def chat_send(self, thread_id: str, message: str):
+        """
+        Send a new message into the `thread_id` that identifies the chat with
+        the user.
+        """
         params = {
             'action': 'send_message',
             'thread': thread_id,
@@ -153,7 +215,10 @@ class Api:
         response = self._post("/pm.php", params)
         assert '"error"' not in response.text, response.text
 
-    def chat_delete(self, thread_id):
+    def chat_delete(self, thread_id: str):
+        """
+        Delete the chat with `thread_id`.
+        """
         params = {
             'action': 'delete_thread',
             'thread': thread_id,
@@ -161,33 +226,50 @@ class Api:
         }
         self._post("/pm.php", params)
 
-    def friends(self, uid):
+    def friends(self, uid: str) -> List[Dict[str, Any]]:
+        """
+        Get friends of the user given as `uid`.
+        """
         url = "/app/friends?uid={}".format(uid)
         response = self._get(url, check_auth=True)
         friends_parser = FriendsParser()
         items = friends_parser.parse(response.text)
         return items
 
-    def friend_add(self, uid):
+    def friend_add(self, uid: str):
+        """
+        Send friend request to the user given by `uid`.
+        """
         url = "/app/friends/add?uid={}".format(uid)
         response = self._get(url)
         if response.status_code != 302:
             raise APIError("could not add user")
 
-    def friend_remove(self, uid):
+    def friend_remove(self, uid: str):
+        """
+        Remove friend given by `uid`.
+        """
         url = "/app/friends/delete?uid={}".format(uid)
         response = self._get(url)
         if response.status_code != 302:
             raise APIError("could not delete user")
 
-    def albums(self, uid):
+    def albums(self, uid: str) -> List[Dict[str, Any]]:
+        """
+        Get albums of the user given by `uid`.
+        """
         response = self._get("/app/albums", {'uid': uid}, check_auth=True)
         pictures_parser = PicturesParser()
         items = pictures_parser.parse_albums(response.text)
         return items
 
-    def pictures(self, uid, aid):
-        response = self._get("/app/album", {'uid': uid, 'aid': aid}, check_auth=True)
+    def pictures(self, uid: str, aid: str):
+        """
+        Get pictures of the user (given by `uid`) and his album (given by 
+        `aid`).
+        """
+        response = self._get("/app/album", {'uid': uid, 'aid': aid}, 
+                             check_auth=True)
         pictures_parser = PicturesParser()
         items = pictures_parser.parse_pictures(response.text)
         return items
@@ -206,7 +288,8 @@ class Api:
         if params is not None:
             url = url + '?' + urlencode(params, True)
         full_url = self._get_full_url(url)
-        response = requests.get(full_url, headers=headers, timeout=self.timeout, allow_redirects=False)
+        response = requests.get(full_url, headers=headers, timeout=self.timeout, 
+                                allow_redirects=False)
         if check_auth and not self._check_body_for_auth(response.text):
             raise APIAuthError()
         return response
@@ -215,7 +298,8 @@ class Api:
         headers = self._get_headers()
         headers['Content-Type'] = 'application/x-www-form-urlencoded'
         full_url = self._get_full_url(url)
-        response = requests.post(full_url, data=params, headers=headers, timeout=self.timeout, allow_redirects=False)
+        response = requests.post(full_url, data=params, headers=headers, 
+                                 timeout=self.timeout, allow_redirects=False)
         if check_auth and not self._check_body_for_auth(response.text):
             raise APIAuthError()
         return response
@@ -239,7 +323,8 @@ class Api:
             'age1': options.get('age1', '16'),
             'age2': options.get('age2', '110'),
             'sex[]': options.get('sex', ['male', 'female']),
-            'continents[]': options.get('continents', ['AF', 'AS', 'EU', 'NA', 'OC', 'SA']),
+            'continents[]': options.get('continents', ['AF', 'AS', 'EU', 'NA', 
+                                                       'OC', 'SA']),
             'countries[]': options.get('countries', ['---']),
             'languages[]': ['---'],
             'lfor[]': [
@@ -280,7 +365,20 @@ class Api:
 
 
 class ApiAsync(Api):
-    async def check_auth(self):
+    """
+    Class for asynchronous API. It is inherited from [Api](#Api).
+    """
+
+    def __init__(self, session: SessionAsync):
+        """
+        Create an API instance.
+        """
+        self._session = session
+
+    async def check_auth(self) -> bool:
+        """
+        Check whether the session is authorized.
+        """
         if self._session:
             try:
                 await self._request(self._session.username)
@@ -291,10 +389,16 @@ class ApiAsync(Api):
         else:
             return False
 
-    async def view(self, user):
+    async def view(self, user: str):
+        """
+        View the given user.
+        """
         await self._request(user)
 
-    async def profile(self, user):
+    async def profile(self, user: str) -> List[Dict[str, Any]]:
+        """
+        Get the profile information of the user.
+        """
         html = await self._request(user)
 
         if "User not found." in html:
@@ -309,7 +413,10 @@ class ApiAsync(Api):
 
         return data
 
-    async def visitors(self):
+    async def visitors(self) -> List[str]:
+        """
+        Get users who viewed your profile.
+        """
         html = await self._request("/app/views")
         soup = BeautifulSoup(html, "lxml")
         items = soup.find_all('div', class_='vBottomTxt')
@@ -319,7 +426,13 @@ class ApiAsync(Api):
             users.append(user)
         return users
 
-    async def search(self, options, limit=1000, timeout=0.0):
+    async def search(self, options: dict, limit: int = 1000, 
+                     timeout: float = 0.0) -> Generator[str, None, None]:
+        """
+        Search for users according to the search `options`. The total number
+        of users is `limit`. Since users are requested as pages, `timeout`
+        is a timeout between page loading.
+        """
         html = await self._request("/app/search")
         csrf_token = find_csrf_token(html)
 
@@ -343,11 +456,17 @@ class ApiAsync(Api):
 
             await asyncio.sleep(timeout)
 
-    async def get_uid(self, user):
+    async def get_uid(self, user: str) -> str:
+        """
+        Get unique user identifier `uid`.
+        """
         profile_info = await self.profile(user)
         return profile_info['uid']
 
-    async def get_thread_id(self, uid):
+    async def get_thread_id(self, uid: str) -> str:
+        """
+        Get a chat thread_id with a user given as `uid`.
+        """
         params = {'action': 'send', 'uid': uid}
 
         try:
@@ -359,7 +478,10 @@ class ApiAsync(Api):
         else:
             raise APIError("Could not load thread_id")
 
-    async def chat(self, count=9, offset=0):
+    async def chat(self, count: int = 9, offset: int = 0) -> Dict[str, Any]:
+        """
+        Get general chat information in count `count` with the offset `offset`.
+        """
         chat_parser = ChatParser()
 
         html = await self._request("/pm.php")
@@ -395,7 +517,13 @@ class ApiAsync(Api):
             'unread': unread
         }
 
-    async def chat_messages(self, thread_id, last_msg_id=None):
+    async def chat_messages(self, thread_id: str, 
+                            last_msg_id: Optional[str] = None
+                            ) -> List[Dict[str, Any]]:
+        """
+        Get chat messages by `thread_id` and `last_msg_id` (so history can be 
+        loaded).
+        """
         params = {
             'action': 'load_messages',
             'thread': thread_id
@@ -412,7 +540,11 @@ class ApiAsync(Api):
 
         return messages
 
-    async def chat_send(self, thread_id, message):
+    async def chat_send(self, thread_id: str, message: str):
+        """
+        Send a new message into the `thread_id` that identifies the chat with
+        the user.
+        """
         params = {
             'action': 'send_message',
             'thread': thread_id,
@@ -423,7 +555,10 @@ class ApiAsync(Api):
         if '"error"' in text:
             raise APIError(text)
 
-    async def chat_delete(self, thread_id):
+    async def chat_delete(self, thread_id: str):
+        """
+        Delete the chat with `thread_id`.
+        """
         params = {
             'action': 'delete_thread',
             'thread': thread_id,
@@ -432,14 +567,20 @@ class ApiAsync(Api):
         await self._request("/pm.php", params=params, method='post', 
                             check_auth=False)
 
-    async def friends(self, uid):
+    async def friends(self, uid: str) -> List[Dict[str, Any]]:
+        """
+        Get friends of the user given as `uid`.
+        """
         url = "/app/friends?uid={}".format(uid)
         html = await self._request(url)
         friends_parser = FriendsParser()
         items = friends_parser.parse(html)
         return items
 
-    async def friend_add(self, uid):
+    async def friend_add(self, uid: str):
+        """
+        Send friend request to the user given by `uid`.
+        """
         url = "/app/friends/add?uid={}".format(uid)
         try:
             await self._request(url)
@@ -448,7 +589,10 @@ class ApiAsync(Api):
         else:
             raise APIError("Could not add friend")
 
-    async def friend_remove(self, uid):
+    async def friend_remove(self, uid: str):
+        """
+        Remove friend given by `uid`.
+        """
         url = "/app/friends/delete?uid={}".format(uid)
         try:
             await self._request(url)
@@ -457,13 +601,20 @@ class ApiAsync(Api):
         else:
             raise APIError("Could not delete friend")
 
-    async def albums(self, uid):
+    async def albums(self, uid: str) -> List[Dict[str, Any]]:
+        """
+        Get albums of the user given by `uid`.
+        """
         html = await self._request("/app/albums", params={'uid': uid})
         pictures_parser = PicturesParser()
         items = pictures_parser.parse_albums(html)
         return items
 
-    async def pictures(self, uid, aid):
+    async def pictures(self, uid: str, aid: str):
+        """
+        Get pictures of the user (given by `uid`) and his album (given by 
+        `aid`).
+        """
         html = await self._request("/app/album", 
                                    params={'uid': uid, 'aid': aid})
         pictures_parser = PicturesParser()

@@ -1,8 +1,32 @@
+"""
+Parser for user pictures. It supports the album structure.
+"""
+
+from typing import List, Dict, Any
+
 from bs4 import BeautifulSoup
 
 
 class PicturesParser:
-    def parse_albums(self, content):
+    """
+    Pictures parser:
+
+    ```python
+    parser = PicturesParser()
+    albums_data = parser.parse_albums(albums_html)
+    ```
+
+    ```python
+    parser = PicturesParser()
+    pictures_data = parser.parse_pictures(pictures_html)
+    ```
+    """
+
+    def parse_albums(self, content: str) -> List[Dict[str, Any]]:
+        """
+        Parse HTML content and return album information incliding its `aid`,
+        description and pictures' URLs.
+        """
         soup = BeautifulSoup(content, "lxml")
 
         elements = soup.find_all('div', class_='editAlbumBox')
@@ -16,7 +40,11 @@ class PicturesParser:
 
         return albums
 
-    def parse_pictures(self, content):
+    def parse_pictures(self, content: str) -> List[Dict[str, Any]]:
+        """
+        Parse HTML content and return a list of pictures as URLs of small and
+        big ones.
+        """
         soup = BeautifulSoup(content, "lxml")
 
         elements = soup.find_all('div', class_='albThumb')
@@ -24,7 +52,8 @@ class PicturesParser:
         for element in elements:
             picture = {}
             picture['src180x180'] = element.find('img')['src']
-            picture['src'] = "https://ipstatic.net/photos/" + picture['src180x180'].split('/180x180/')[1]
+            picture['src'] = ("https://ipstatic.net/photos/" 
+                              + picture['src180x180'].split('/180x180/')[1])
             # picture['src'] = self._patch_src(picture['src'])
             pictures.append(picture)
 

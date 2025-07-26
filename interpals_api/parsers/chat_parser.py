@@ -1,19 +1,50 @@
+"""
+Parser for the chat. It supports flexible chats browsing, general information
+and fetching the messages from the history.
+"""
+
+from typing import List, Dict, Any
+
 from bs4 import BeautifulSoup
 
 
 class ChatParser:
-    def parse_maxmsgid(self, body):
-        soup = BeautifulSoup(body, "lxml")
-        maxmsgid = soup.find('div', id='threads_left')['data-max-msg-id']
-        return maxmsgid
+    """
+    Chat parser:
 
-    def parse_unread(self, body):
-        soup = BeautifulSoup(body, "lxml")
+    ```python
+    parser = ChatParser()
+    maxmsgid = parser.parse_maxmsgid(html)
+    unread = parser.parse_unread(html)
+    chats = parser.parse_chat(html)
+    messages = parser.parse_messages(html)
+    ```
+    """
+
+    def parse_maxmsgid(self, content: str) -> int:
+        """
+        Parse maximum id of existing chats from HTML content. It is needed to
+        request chats up to this number (as `max_msg_id` parameter).
+        """
+        soup = BeautifulSoup(content, "lxml")
+        maxmsgid = soup.find('div', id='threads_left')['data-max-msg-id']
+        return int(maxmsgid)
+
+    def parse_unread(self, content: str) -> int:
+        """
+        Parse the count of unread chats from HTML content.
+        """
+        soup = BeautifulSoup(content, "lxml")
         unread = soup.find('span', id='pmNewCnt').text.strip()
         return int(unread[2:-1]) if unread else 0
 
-    def parse_chat(self, body):
-        soup = BeautifulSoup(body, "lxml")
+    def parse_chat(self, content: str) -> List[Dict[str, Any]]:
+        """
+        Parse all chats from HTML content. They include thread_id (it's needed 
+        to request chat messages) and other basic fields. The result is a list 
+        of dictionaries.
+        """
+        soup = BeautifulSoup(content, "lxml")
 
         chats = []
         elements = soup.find_all('div', class_='pm_thread')
@@ -26,8 +57,11 @@ class ChatParser:
 
         return chats
 
-    def parse_messages(self, body):
-        soup = BeautifulSoup(body, "lxml")
+    def parse_messages(self, content: str) -> List[Dict[str, Any]]:
+        """
+        Parse char messages from HTML content.
+        """
+        soup = BeautifulSoup(content, "lxml")
 
         messages = []
 

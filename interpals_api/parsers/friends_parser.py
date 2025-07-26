@@ -1,8 +1,27 @@
+"""
+Parser for user friends.
+"""
+
+from typing import List, Dict, Any
+
 from bs4 import BeautifulSoup
 
 
 class FriendsParser:
-    def parse(self, content):
+    """
+    Friends parser:
+
+    ```python
+    parser = FriendsParser()
+    data = parser.parse(html)
+    ```
+    """
+
+    def parse(self, content: str) -> List[Dict[str, Any]]:
+        """
+        Parse HTML content and return list of friends as dictionaries having
+        username, age, city, online status and avatar URL.
+        """
         soup = BeautifulSoup(content, "lxml")
 
         boxes = soup.find_all('div', class_='friendBox')

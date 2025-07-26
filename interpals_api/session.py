@@ -1,5 +1,12 @@
+"""
+Session instance keeps the necessary cookie parameters so API calls work
+correctly. Session can be created from raw cookie data or emulate the login
+process using username and password.
+"""
+
 import json
 from urllib.parse import urljoin
+from typing import Dict, TextIO, Self
 
 import requests
 import aiohttp
@@ -11,23 +18,49 @@ from .cookie import Cookie
 
 
 class Session:
-    def __init__(self, username, interpals_sessid, csrf_cookieV2):
-        self.username = username
-        self.interpals_sessid = interpals_sessid
-        self.csrf_cookieV2 = csrf_cookieV2
+    """
+    Synchronous session class.
+    """
 
-    def __repr__(self):
+    def __init__(self, username: str, interpals_sessid: str, 
+                 csrf_cookieV2: str):
+        """
+        Create a new session instance from the necessary cookie data:
+        `username`, `interpals_sessid`, `csrf_cookieV2`.
+        """
+        self.username = username
+        """
+        `username`
+        """
+
+        self.interpals_sessid = interpals_sessid
+        """
+        `interpals_sessid` cookie
+        """
+
+        self.csrf_cookieV2 = csrf_cookieV2
+        """
+        `csrf_cookieV2` cookie
+        """
+
+    def __repr__(self) -> str:
         return f"Session(username={self.username}, " \
                f"interpals_sessid={self.interpals_sessid}, " \
                f"csrf_cookieV2={self.csrf_cookieV2})"
 
-    def cookie(self):
+    def cookie(self) -> Dict[str, str]:
+        """
+        Get cookie data as a dictionary.
+        """
         return {
             'interpals_sessid': self.interpals_sessid,
             'csrf_cookieV2': self.csrf_cookieV2
         }
 
-    def dump(self, f):
+    def dump(self, f: TextIO):
+        """
+        Dump session data into a file-like object.
+        """
         kwargs = {
             'username': self.username,
             'interpals_sessid': self.interpals_sessid,
@@ -36,12 +69,18 @@ class Session:
         json.dump(kwargs, f)
 
     @classmethod
-    def load(cls, f):
+    def load(cls, f: TextIO) -> Self:
+        """
+        Load session instance from a file-like object.
+        """
         kwargs = json.load(f)
         return cls(**kwargs)
 
     @classmethod
-    def login(cls, username, password):
+    def login(cls, username: str, password: str) -> Self:
+        """
+        Emulate the login process. It will return a session instance on success.
+        """
         # Cookie object
         cookie = Cookie()
 
@@ -115,8 +154,15 @@ class Session:
 
 
 class SessionAsync(Session):
+    """
+    Synchronous session class. It is inherited from [Session](#Session).
+    """
+
     @classmethod
-    async def login(cls, username, password):
+    async def login(cls, username: str, password: str) -> Self:
+        """
+        Emulate the login process. It will return a session instance on success.
+        """
         # Cookie object
         cookie = Cookie()
 
