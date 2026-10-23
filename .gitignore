@@ -5,9 +5,12 @@ __pycache__
 
 /build/
 /dist/
+/tmp/*
+!/tmp/.gitkeep
 
-/test-config.txt
+*.session
 
 /.venv/
 /.idea/
-/main.py
+/.env
+/draft.txt

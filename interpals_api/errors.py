@@ -2,6 +2,7 @@
 The project error tree.
 """
 
+
 class InterpalsAPIError(Exception):
     """
     Base InterpalsAPI error.
@@ -44,13 +45,6 @@ class TooManyLoginAttemptsError(SessionError):
     pass
 
 
-class APITimeoutError(APIError):
-    """
-    Timeout error in API call.
-    """
-    pass
-
-
 class APIAuthError(APIError):
     """
     Authorization error in API call.
@@ -58,8 +52,8 @@ class APIAuthError(APIError):
     pass
 
 
-class APIRedirectError(APIError):
+class ParseError(APIError):
     """
-    Redirect error in API call.
+    Error in parser.
     """
     pass
