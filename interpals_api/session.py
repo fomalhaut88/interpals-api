@@ -161,6 +161,6 @@ async def login_async(username: str, password: str) -> Session:
         # Return session
         return Session(
             username=username,
-            interpals_sessid=cookies['interpals_sessid'],
-            csrf_cookieV2=cookies['csrf_cookieV2'],
+            interpals_sessid=cookies['interpals_sessid'].value,
+            csrf_cookieV2=cookies['csrf_cookieV2'].value,
         )
