@@ -4,9 +4,8 @@ This Python library provides a simple HTTP API for working with the website http
 
 * retrieving data by user identifier
 * listing visitors
-* searching for users by criterions
-* viewing and sending messages, deleting chats
-* listing, adding and removing friends
+* searching for users by criteria
+* viewing users
 * listing albums and pictures
 
 ## Installation
@@ -18,25 +17,25 @@ pip install interpals-api
 ## Basic example
 
 ```python
-from interpals_api import Session, Api
+from interpals_api import login_sync, ApiSync
 
-session = Session.login('yourusername', 'yourpassword')
-api = Api(session)
+session = login_sync('yourusername', 'yourpassword')
+api = ApiSync(session)
 
-user_info = api.profile('someuser')
-print(user_info)
+profile = api.profile('someuser')
+print(profile)
 ```
 
-Since version `2.1` it supports asynchronous calls for each api method. Below there is a brief asynchonous example:
+Since version `2.1` it supports asynchronous calls for each api method. Below is a brief asynchronous example:
 
 ```python
-from interpals_api import SessionAsync, ApiAsync
+from interpals_api import login_async, ApiAsync
 
-session = await SessionAsync.login('yourusername', 'yourpassword')
+session = await login_async('yourusername', 'yourpassword')
 api = ApiAsync(session)
 
-user_info = await api.profile('someuser')
-print(user_info)
+profile = await api.profile('someuser')
+print(profile)
 ```
 
 ## Other examples
@@ -44,38 +43,39 @@ print(user_info)
 Basic example to retrieve user info:
 
 ```python
-from interpals_api import Session, Api
+from interpals_api import login_sync, ApiSync
 
-session = Session.login('yourusername', 'yourpassword')
-api = Api(session)
+session = login_sync('yourusername', 'yourpassword')
+api = ApiSync(session)
 
 # This gives info of the user with the link: https://www.interpals.net/someuser
-user_info = api.profile('someuser')
+profile = api.profile('someuser')
 ```
 
 Dump and load session object:
 
 ```python
-from interpals_api import Session, Api
+from interpals_api import login_sync, ApiSync
 
-session = Session.login('yourusername', 'yourpassword')
+session = login_sync('yourusername', 'yourpassword')
 
 # Save session into a file
-with open('session.json', 'w') as f:
-    session.dump(f)
+with open('session.txt', 'w') as f:
+    f.write(session.dumps())
 
 # Load session from the saved file
-with open('session.json') as f:
-    session = Session.load(f)
+with open('session.txt') as f:
+    session = Session.loads(f.read())
 ```
 
 Viewing and searching for users:
 
 ```python
-from interpals_api import Session, Api
+from interpals_api import login_sync, ApiSync
+from interpals_api.schemas import SearchOptions
 
-session = Session.login('yourusername', 'yourpassword')
-api = Api(session)
+session = login_sync('yourusername', 'yourpassword')
+api = ApiSync(session)
 
 # Viewing a certain user
 api.view('someuser')
@@ -85,73 +85,33 @@ users = api.visitors()
 print(users)
 
 # Searching for users
-options = {
-    'age1': '20',
-    'age2': '40',
-    'sex': ['male', 'female'],
-    'continents': ['AF', 'AS', 'EU', 'NA', 'OC', 'SA'],
-    'countries': ['US', 'CA', 'UK', 'RU'],
-    'keywords': 'travelling',
-    'online': True,
-    'cityName': 'London'  # Or you can use 'city' with its direct code on the website (it's faster)
-}
+options = SearchOptions(
+    age1=20,
+    age2=40,
+    sex=['male', 'female'],
+    continents=['AF', 'AS', 'EU', 'NA', 'OC', 'SA'],
+    countries=['US', 'CA', 'UK', 'RU'],
+    keywords='travelling',
+    online=True,
+    city_name='London'  # Or you can use 'city_code' with its direct code on the website (it's faster)
+)
 for user in api.search(options, limit=100, timeout=1.0):
     print(user)
 ```
 
-To work with friends and pictures, it is necessary to use `uid` in methods:
+To work with pictures, it is necessary to use `uid` in methods:
 
 ```python
-from interpals_api import Session, Api
+from interpals_api import login_sync, ApiSync
 
-session = Session.login('yourusername', 'yourpassword')
-api = Api(session)
+session = login_sync('yourusername', 'yourpassword')
+api = ApiSync(session)
 
 uid = api.get_uid('someuser')
 
-# Listing friends of the user 'someuser'
-friends = api.friends(uid)
-print(friends)
-
-# Adding 'someuser' to friends
-api.friend_add(uid)
-
-# Removing 'someuser' from friends
-api.friend_remove(uid)
-
-# Listing pictures
 albums = api.albums(uid)
 for album in albums:
-    aid = album['aid']
-    pictures = api.pictures(uid, aid)
+    pictures = api.pictures(uid, album.aid)
     for picture in pictures:
-        print(picture['src'])
-```
-
-Working with the chat is done through `thread_id`:
-
-```python
-from interpals_api import Session, Api
-
-session = Session.login('yourusername', 'yourpassword')
-api = Api(session)
-
-uid = api.get_uid('someuser')
-
-# Listing your chats
-result = api.chat(count=9, offset=0)
-print(result['chats'])
-
-# Staring new chat (getting thread_id)
-thread_id = api.get_thread_id(uid)
-
-# Show chat messages
-messages = api.chat_messages(thread_id)
-print(messages)
-
-# Send new message to the thread
-api.chat_send(thread_id, "Hey! How are you?")
-
-# Removing chat
-api.chat_delete(thread_id)
+        print(picture.large)
 ```

@@ -8,9 +8,9 @@ def get_long_description():
 
 setup(
     name='interpals-api',
-    version="2.3.1",
+    version="3.0",
     author='Alexander Khlebushchev',
-    description="Unofficial Python API for Interpals.net.",
+    description="Unofficial Python API for interpals.net.",
     url="https://github.com/fomalhaut88/interpals-api",
     project_urls={
         "Homepage": "https://pypi.org/project/interpals-api/",
@@ -25,10 +25,10 @@ setup(
     long_description_content_type="text/markdown",
     python_requires='>=3.12',
     install_requires=[
-        'aiohttp>=3.12',
-        'requests>=2.32',
-        'lxml>=6.0',
-        'beautifulsoup4>=4.13',
+        'aiohttp>=3.14',
+        'flake8>=7.4',
+        'requests>=2.34',
+        'yarl>=1.25',
     ],
     classifiers=[
         "Development Status :: 5 - Production/Stable",
