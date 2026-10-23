@@ -8,7 +8,7 @@ def get_long_description():
 
 setup(
     name='interpals-api',
-    version="3.0",
+    version="3.0.1",
     author='Alexander Khlebushchev',
     description="Unofficial Python API for interpals.net.",
     url="https://github.com/fomalhaut88/interpals-api",
