@@ -26,7 +26,6 @@ setup(
     python_requires='>=3.12',
     install_requires=[
         'aiohttp>=3.14',
-        'flake8>=7.4',
         'requests>=2.34',
         'yarl>=1.25',
     ],
